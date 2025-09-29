@@ -32,9 +32,12 @@ NN::NN(long long vocab_size, long long corpus_size, long long dim,
       }
     }
   }
-  for (a = 0; a < m_corpus_size; a++) for (b = 0; b < m_dim; b++) {
-    next_random = next_random * (unsigned long long)25214903917 + 11;
-    m_dsyn0[a * m_dim + b] = (((next_random & 0xFFFF) / (real)65536) - 0.5) / m_dim;
+  for (a = 0; a < m_corpus_size; a++) {
+    for (b = 0; b < m_dim; b++) {
+      next_random = next_random * (unsigned long long)25214903917 + 11;
+      m_dsyn0[a * m_dim + b] = (((next_random & 0xFFFF) / (real)65536) - 0.5) / m_dim;
+      //std::cout << m_dsyn0[a * m_dim + b] << "\n";
+    }
   }
   m_syn1 = NULL;
   m_syn1neg = NULL;

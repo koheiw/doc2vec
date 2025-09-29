@@ -113,7 +113,7 @@ void Doc2Vec::train(const char * train_file,
   }
   for (size_t a = 0; a < m_trainModelThreads.size(); a++) pthread_join(pt[a], NULL);
   free(pt);
-  if(m_trace > 0){
+  if (m_trace > 0){
     std::time_t t = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
     Rcpp::Rcout << Rcpp::as<Rcpp::Datetime>(Rcpp::wrap(t)) << " Closed all threads, normalising" << "\n";     
   }
@@ -268,8 +268,7 @@ real Doc2Vec::doc_likelihood(TaggedDocument * doc, int skip)
   return trainThread.doc_likelihood();
 }
 
-real Doc2Vec::context_likelihood(TaggedDocument * doc, int sentence_position)
-{
+real Doc2Vec::context_likelihood(TaggedDocument * doc, int sentence_position) {
   if(!m_hs){
     return 0;
   }

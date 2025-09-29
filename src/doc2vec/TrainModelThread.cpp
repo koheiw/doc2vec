@@ -39,12 +39,12 @@ void TrainModelThread::train()
   TaggedDocument * doc = NULL;
   for(int local_iter = 0; local_iter < m_doc2vec->m_iter; local_iter++)
   {
-    if(m_id == 0){
-      if(m_doc2vec->m_trace > 0){
+    if (m_id == 0){
+      if (m_doc2vec->m_trace > 0) {
         std::time_t t = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-        if(m_doc2vec->m_trace > 1){
+        if (m_doc2vec->m_trace > 1) {
           Rcpp::Rcout << "\n" << Rcpp::as<Rcpp::Datetime>(Rcpp::wrap(t)) << " Start iteration " << local_iter + 1 << "/" << m_doc2vec->m_iter << ", alpha: " << m_doc2vec->m_alpha << "\n";       
-        }else{
+        } else {
           Rcpp::Rcout << Rcpp::as<Rcpp::Datetime>(Rcpp::wrap(t)) << " Start iteration " << local_iter + 1 << "/" << m_doc2vec->m_iter << ", alpha: " << m_doc2vec->m_alpha << "\n";     
         }
       }
@@ -140,8 +140,7 @@ void TrainModelThread::trainSampleCbow(long long central, long long context_star
   for (c = 0; c < layer1_size; c++) m_neu1e[c] = 0; // NOTE: reset hidden layer error
   //averge context
   // NOTE: average word vectors
-  for(a = context_start; a < context_end; a++) if(a != central)
-  {
+  for (a = context_start; a < context_end; a++) if(a != central) {
     last_word = m_sen[a];
     for (c = 0; c < layer1_size; c++) m_neu1[c] += syn0[c + last_word * layer1_size];
     cw++;
@@ -164,7 +163,7 @@ void TrainModelThread::trainSampleCbow(long long central, long long context_star
       } 
       g = (1 - vocab[central_word].code[d] - f) * m_doc2vec->m_alpha;
       for (c = 0; c < layer1_size; c++) m_neu1e[c] += g * syn1[c + l2];
-      if(!m_infer) {
+      if (!m_infer) {
         for (c = 0; c < layer1_size; c++) syn1[c + l2] += g * m_neu1[c];
       }
     }
@@ -196,9 +195,9 @@ void TrainModelThread::trainSampleCbow(long long central, long long context_star
       }
     }  
   }
-  if(!m_infer) {
-    for(long long a = context_start; a < context_end; a++) {
-      if(a != central) {
+  if (!m_infer) {
+    for (long long a = context_start; a < context_end; a++) {
+      if (a != central) {
         last_word = m_sen[a];
         for (c = 0; c < layer1_size; c++) syn0[c + last_word * layer1_size] += m_neu1e[c];
       }
@@ -267,32 +266,26 @@ void TrainModelThread::trainSampleSg(long long central, long long context_start,
   }
 }
 
-void TrainModelThread::trainDocument()
-{
+void TrainModelThread::trainDocument() {
   long long sentence_position, a, b, context_start, context_end, last_word;
-  for(sentence_position = 0; sentence_position < m_sentence_length; sentence_position++)
-  {
+  for(sentence_position = 0; sentence_position < m_sentence_length; sentence_position++) {
     m_next_random = m_next_random * (unsigned long long)25214903917 + 11;
     b = m_next_random % m_doc2vec->m_window;
     context_start = MAX(0, sentence_position - m_doc2vec->m_window + b);
     context_end = MIN(sentence_position + m_doc2vec->m_window - b + 1, m_sentence_length);
     // NOTE: train word vectors first
-    if(m_doc2vec->m_cbow) {
+    if (m_doc2vec->m_cbow) {
       // PV-DM
       // NOTE: train both word and document vectors
       trainSampleCbow(sentence_position, context_start, context_end);
-    }
-    else
-    {
+    } else {
       // # PV-DBOW
       // NOTE: train only word vectors
       if(!m_infer) trainSampleSg(sentence_position, context_start, context_end);
     }
   }
-  if(!m_doc2vec->m_cbow)
-  {
-    for(a = 0; a < m_sentence_nosample_length; a++)
-    {
+  if(!m_doc2vec->m_cbow) {
+    for(a = 0; a < m_sentence_nosample_length; a++) {
       last_word = m_sen_nosample[a];
       // NOTE: train only document vectors
       trainPairSg(last_word, m_doc_vector);
@@ -300,10 +293,8 @@ void TrainModelThread::trainDocument()
   }
 }
 
-bool TrainModelThread::down_sample(long long cn)
-{
-  if (m_doc2vec->m_sample > 0)
-  {
+bool TrainModelThread::down_sample(long long cn) {
+  if (m_doc2vec->m_sample > 0) {
     real ran = (sqrt(cn /
       (m_doc2vec->m_sample * m_doc2vec->m_word_vocab->m_train_words)) + 1) *
       (m_doc2vec->m_sample * m_doc2vec->m_word_vocab->m_train_words) / cn;
@@ -313,16 +304,14 @@ bool TrainModelThread::down_sample(long long cn)
   return false;
 }
 
-long long TrainModelThread::negtive_sample()
-{
+long long TrainModelThread::negtive_sample() {
   m_next_random = m_next_random * (unsigned long long)25214903917 + 11;
   long long target = m_doc2vec->m_negtive_sample_table[(m_next_random >> 16) % negtive_sample_table_size];
   if (target == 0) target = m_next_random % (m_doc2vec->m_word_vocab->m_vocab_size - 1) + 1;
   return target;
 }
 
-real TrainModelThread::doc_likelihood()
-{
+real TrainModelThread::doc_likelihood() {
   real likelihood = 0;
   long long sentence_position;
   for(sentence_position = 0; sentence_position < m_sentence_nosample_length; sentence_position++)
@@ -332,16 +321,14 @@ real TrainModelThread::doc_likelihood()
   return likelihood;
 }
 
-real TrainModelThread::context_likelihood(long long sentence_position)
-{
+real TrainModelThread::context_likelihood(long long sentence_position) {
   real likelihood = 0, *context_vector = NULL;
   real * syn0 = m_doc2vec->m_nn->m_syn0;
   long long layer1_size = m_doc2vec->m_nn->m_dim;
   long long a, c, context_start, context_end, last_word, cw;
   context_start = MAX(0, sentence_position - m_doc2vec->m_window);
   context_end = MIN(sentence_position + m_doc2vec->m_window + 1, m_sentence_length);
-  if(m_doc2vec->m_cbow)
-  {
+  if(m_doc2vec->m_cbow) {
     // mean vector
     for (c = 0; c < layer1_size; c++) m_neu1[c] = 0;
     cw = 0;
