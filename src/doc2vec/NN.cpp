@@ -127,17 +127,17 @@ void NN::norm()
   long long a, b;
   real len;
   for(a = 0; a < m_vocab_size; a++) {
-    len = 0;
-    for(b = 0; b < m_dim; b++) {
-      len += m_syn0[b + a * m_dim] * m_syn0[b + a * m_dim];
+    len = 0; 
+    for (b = 0; b < m_dim; b++) {
+      len += m_syn0[b + a * m_dim] * m_syn0[b + a * m_dim]; // NOTE: sum of square
     }
-    len = sqrt(len);
+    len = sqrt(len); // NOTE: root of sum of square
     for(b = 0; b < m_dim; b++) m_syn0norm[b + a * m_dim] = m_syn0[b + a * m_dim] / len;
   }
   for(a = 0; a < m_corpus_size; a++) {
     len = 0;
-    for(b = 0; b < m_dim; b++) {
-      len += m_dsyn0[b + a * m_dim] * m_dsyn0[b + a * m_dim];
+    for (b = 0; b < m_dim; b++) {
+      len += m_dsyn0[b + a * m_dim] * m_dsyn0[b + a * m_dim]; // NOTE: sum of square
     }
     len = sqrt(len);
     for(b = 0; b < m_dim; b++) m_dsyn0norm[b + a * m_dim] = m_dsyn0[b + a * m_dim] / len;
