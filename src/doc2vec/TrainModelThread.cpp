@@ -125,8 +125,8 @@ void TrainModelThread::buildDocument(TaggedDocument * doc, int skip)
 
 void TrainModelThread::trainSampleCbow(long long central, long long context_start, long long context_end)
 {
-  if (central == 0)
-    std::cout << "trainSampleCbow()\n";
+  // if (central == 0)
+  //   std::cout << "trainSampleCbow()\n";
   real f, g;
   long long a, c, d, l2, last_word, target, label, cw = 0;
   long long central_word = m_sen[central];
@@ -150,47 +150,68 @@ void TrainModelThread::trainSampleCbow(long long central, long long context_star
   cw++;
   for (c = 0; c < layer1_size; c++) m_neu1[c] /= cw;
   //hierarchical softmax
-  if(m_doc2vec->m_hs) for (d = 0; d < vocab[central_word].codelen; d++) {
-    f = 0;
-    l2 = vocab[central_word].point[d] * layer1_size;
-    for (c = 0; c < layer1_size; c++) f += m_neu1[c] * syn1[c + l2];
-    if (f <= -MAX_EXP) continue;
-    else if (f >= MAX_EXP) continue;
-    else f = m_doc2vec->m_expTable[(int)((f + MAX_EXP) * (EXP_TABLE_SIZE / MAX_EXP / 2))];
-    g = (1 - vocab[central_word].code[d] - f) * m_doc2vec->m_alpha;
-    for (c = 0; c < layer1_size; c++) m_neu1e[c] += g * syn1[c + l2];
-    if(!m_infer) for (c = 0; c < layer1_size; c++) syn1[c + l2] += g * m_neu1[c];
+  if(m_doc2vec->m_hs) {
+    for (d = 0; d < vocab[central_word].codelen; d++) {
+      f = 0;
+      l2 = vocab[central_word].point[d] * layer1_size;
+      for (c = 0; c < layer1_size; c++) f += m_neu1[c] * syn1[c + l2];
+      if (f <= -MAX_EXP) {
+        continue;
+      } else if (f >= MAX_EXP) {
+        continue;
+      } else {
+        f = m_doc2vec->m_expTable[(int)((f + MAX_EXP) * (EXP_TABLE_SIZE / MAX_EXP / 2))];
+      } 
+      g = (1 - vocab[central_word].code[d] - f) * m_doc2vec->m_alpha;
+      for (c = 0; c < layer1_size; c++) m_neu1e[c] += g * syn1[c + l2];
+      if(!m_infer) {
+        for (c = 0; c < layer1_size; c++) syn1[c + l2] += g * m_neu1[c];
+      }
+    }
   }
   //negative sampling
-  if (m_doc2vec->m_negtive > 0) for (d = 0; d < m_doc2vec->m_negtive + 1; d++) {
-    if (d == 0) {
-      target = central_word;
-      label = 1;
-    } else {
-      target = negtive_sample();
-      if (target == central_word) continue;
-      label = 0;
+  if (m_doc2vec->m_negtive > 0) {
+    for (d = 0; d < m_doc2vec->m_negtive + 1; d++) {
+      if (d == 0) {
+        target = central_word;
+        label = 1;
+      } else {
+        target = negtive_sample();
+        if (target == central_word) continue;
+        label = 0;
+      }
+      l2 = target * layer1_size;
+      f = 0;
+      for (c = 0; c < layer1_size; c++) f += m_neu1[c] * syn1neg[c + l2];
+      if (f > MAX_EXP) {
+        g = (label - 1) * m_doc2vec->m_alpha;
+      } else if (f < -MAX_EXP) {
+        g = (label - 0) * m_doc2vec->m_alpha;
+      } else {
+        g = (label - m_doc2vec->m_expTable[(int)((f + MAX_EXP) * (EXP_TABLE_SIZE / MAX_EXP / 2))]) * m_doc2vec->m_alpha;
+      }
+      for (c = 0; c < layer1_size; c++) m_neu1e[c] += g * syn1neg[c + l2];
+      if(!m_infer) {
+        for (c = 0; c < layer1_size; c++) syn1neg[c + l2] += g * m_neu1[c];  
+      }
+    }  
+  }
+  if(!m_infer) {
+    for(long long a = context_start; a < context_end; a++) {
+      if(a != central) {
+        last_word = m_sen[a];
+        for (c = 0; c < layer1_size; c++) syn0[c + last_word * layer1_size] += m_neu1e[c];
+      }
     }
-    l2 = target * layer1_size;
-    f = 0;
-    for (c = 0; c < layer1_size; c++) f += m_neu1[c] * syn1neg[c + l2];
-    if (f > MAX_EXP) g = (label - 1) * m_doc2vec->m_alpha;
-    else if (f < -MAX_EXP) g = (label - 0) * m_doc2vec->m_alpha;
-    else g = (label - m_doc2vec->m_expTable[(int)((f + MAX_EXP) * (EXP_TABLE_SIZE / MAX_EXP / 2))]) * m_doc2vec->m_alpha;
-    for (c = 0; c < layer1_size; c++) m_neu1e[c] += g * syn1neg[c + l2];
-    if(!m_infer) for (c = 0; c < layer1_size; c++) syn1neg[c + l2] += g * m_neu1[c];
   }
-  if(!m_infer) for(long long a = context_start; a < context_end; a++) if(a != central)
-  {
-    last_word = m_sen[a];
-    for (c = 0; c < layer1_size; c++) syn0[c + last_word * layer1_size] += m_neu1e[c];
+  for (c = 0; c < layer1_size; c++) {
+    m_doc_vector[c] += m_neu1e[c]; // NOTE: update document vector
   }
-  for (c = 0; c < layer1_size; c++) m_doc_vector[c] += m_neu1e[c]; // NOTE: update document vector
 }
 
 void TrainModelThread::trainPairSg(long long central_word, real * context)
 {
-  std::cout << "trainPairSg()\n";
+  // std::cout << "trainPairSg()\n";
   real f, g;
   long long c, d, l2, target, label;
   long long layer1_size = m_doc2vec->m_nn->m_dim;
@@ -234,8 +255,8 @@ void TrainModelThread::trainPairSg(long long central_word, real * context)
 
 void TrainModelThread::trainSampleSg(long long central, long long context_start, long long context_end)
 {
-  if (central == 0)
-    std::cout << "trainSampleSg()\n";
+  // if (central == 0)
+  //   std::cout << "trainSampleSg()\n";
   long long a, last_word;
   long long central_word = m_sen[central];
   for(a = context_start; a < context_end; a++) if(a != central)
