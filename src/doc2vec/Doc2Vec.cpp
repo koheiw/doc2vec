@@ -71,7 +71,7 @@ void Doc2Vec::train(const char * train_file,
   int min_count, int threads, int trace, Rcpp::NumericMatrix embeddings)
 {
   //printf("Starting training using file %s\n", train_file);
-  m_cbow = cbow;
+  m_cbow = cbow; // NOTE: 
   m_hs = hs;
   m_negtive = negtive;
   m_window = window;

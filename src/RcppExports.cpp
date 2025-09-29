@@ -5,6 +5,11 @@
 
 using namespace Rcpp;
 
+#ifdef RCPP_USE_GLOBAL_ROSTREAM
+Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
+Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
+#endif
+
 // paragraph2vec_train
 Rcpp::List paragraph2vec_train(const char * trainFile, Rcpp::NumericMatrix embeddings, int size, int cbow, int hs, int negative, int iterations, int window, double alpha, double sample, int min_count, int threads, int trace);
 RcppExport SEXP _doc2vec_paragraph2vec_train(SEXP trainFileSEXP, SEXP embeddingsSEXP, SEXP sizeSEXP, SEXP cbowSEXP, SEXP hsSEXP, SEXP negativeSEXP, SEXP iterationsSEXP, SEXP windowSEXP, SEXP alphaSEXP, SEXP sampleSEXP, SEXP min_countSEXP, SEXP threadsSEXP, SEXP traceSEXP) {

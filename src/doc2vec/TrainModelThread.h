@@ -43,7 +43,7 @@ private:
   long long m_sentence_length;
   long long m_sen_nosample[MAX_SENTENCE_LENGTH];
   long long m_sentence_nosample_length;
-  real * m_doc_vector;
+  real * m_doc_vector; // NOTE real is float;
   long long m_word_count;
   long long m_last_word_count;
   real *m_neu1;

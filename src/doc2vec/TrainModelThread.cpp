@@ -21,7 +21,8 @@ TrainModelThread::TrainModelThread(long long id, Doc2Vec * doc2vec,
   m_sentence_nosample_length = 0;
   m_word_count = 0;
   m_last_word_count = 0;
-
+  
+  // NOTE: resize array
   m_neu1 = (real *)calloc(doc2vec->m_nn->m_dim, sizeof(real));
   m_neu1e = (real *)calloc(doc2vec->m_nn->m_dim, sizeof(real));
 }
@@ -124,6 +125,8 @@ void TrainModelThread::buildDocument(TaggedDocument * doc, int skip)
 
 void TrainModelThread::trainSampleCbow(long long central, long long context_start, long long context_end)
 {
+  if (central == 0)
+    std::cout << "trainSampleCbow()\n";
   real f, g;
   long long a, c, d, l2, last_word, target, label, cw = 0;
   long long central_word = m_sen[central];
@@ -133,16 +136,17 @@ void TrainModelThread::trainSampleCbow(long long central, long long context_star
   real * syn1neg = m_doc2vec->m_nn->m_syn1neg;
   struct vocab_word_t* vocab = m_doc2vec->m_word_vocab->m_vocab;
 
-  for (c = 0; c < layer1_size; c++) m_neu1[c] = 0;
-  for (c = 0; c < layer1_size; c++) m_neu1e[c] = 0;
+  for (c = 0; c < layer1_size; c++) m_neu1[c] = 0; // NOTE: reset hidden layer
+  for (c = 0; c < layer1_size; c++) m_neu1e[c] = 0; // NOTE: reset hidden layer error
   //averge context
+  // NOTE: average word vectors
   for(a = context_start; a < context_end; a++) if(a != central)
   {
     last_word = m_sen[a];
     for (c = 0; c < layer1_size; c++) m_neu1[c] += syn0[c + last_word * layer1_size];
     cw++;
   }
-  for (c = 0; c < layer1_size; c++) m_neu1[c] += m_doc_vector[c];
+  for (c = 0; c < layer1_size; c++) m_neu1[c] += m_doc_vector[c]; // NOTE: use word and document vectors
   cw++;
   for (c = 0; c < layer1_size; c++) m_neu1[c] /= cw;
   //hierarchical softmax
@@ -181,23 +185,24 @@ void TrainModelThread::trainSampleCbow(long long central, long long context_star
     last_word = m_sen[a];
     for (c = 0; c < layer1_size; c++) syn0[c + last_word * layer1_size] += m_neu1e[c];
   }
-  for (c = 0; c < layer1_size; c++) m_doc_vector[c] += m_neu1e[c];
+  for (c = 0; c < layer1_size; c++) m_doc_vector[c] += m_neu1e[c]; // NOTE: update document vector
 }
 
 void TrainModelThread::trainPairSg(long long central_word, real * context)
 {
+  std::cout << "trainPairSg()\n";
   real f, g;
   long long c, d, l2, target, label;
   long long layer1_size = m_doc2vec->m_nn->m_dim;
-  real * syn1 = m_doc2vec->m_nn->m_syn1;
-  real * syn1neg = m_doc2vec->m_nn->m_syn1neg;
+  real * syn1 = m_doc2vec->m_nn->m_syn1; // NOTE: hidden layer weight
+  real * syn1neg = m_doc2vec->m_nn->m_syn1neg; // NOTE: hidden layer weight
   for (c = 0; c < layer1_size; c++) m_neu1e[c] = 0;
   //hierarchical softmax
   if(m_doc2vec->m_hs) for (d = 0; d < m_doc2vec->m_word_vocab->m_vocab[central_word].codelen; d++)
   {
     f = 0;
     l2 = m_doc2vec->m_word_vocab->m_vocab[central_word].point[d] * layer1_size;
-    for (c = 0; c < layer1_size; c++) f += context[c] * syn1[c + l2];
+    for (c = 0; c < layer1_size; c++) f += context[c] * syn1[c + l2]; // NOTE: use word or document vectors
     if (f <= -MAX_EXP) continue;
     else if (f >= MAX_EXP) continue;
     else f = m_doc2vec->m_expTable[(int)((f + MAX_EXP) * (EXP_TABLE_SIZE / MAX_EXP / 2))];
@@ -217,7 +222,7 @@ void TrainModelThread::trainPairSg(long long central_word, real * context)
    }
    l2 = target * layer1_size;
    f = 0;
-   for (c = 0; c < layer1_size; c++) f += context[c] * syn1neg[c + l2];
+   for (c = 0; c < layer1_size; c++) f += context[c] * syn1neg[c + l2]; // NOTE: update word or document vectors
    if (f > MAX_EXP) g = (label - 1) * m_doc2vec->m_alpha;
    else if (f < -MAX_EXP) g = (label - 0) * m_doc2vec->m_alpha;
    else g = (label - m_doc2vec->m_expTable[(int)((f + MAX_EXP) * (EXP_TABLE_SIZE / MAX_EXP / 2))]) * m_doc2vec->m_alpha;
@@ -229,11 +234,14 @@ void TrainModelThread::trainPairSg(long long central_word, real * context)
 
 void TrainModelThread::trainSampleSg(long long central, long long context_start, long long context_end)
 {
+  if (central == 0)
+    std::cout << "trainSampleSg()\n";
   long long a, last_word;
   long long central_word = m_sen[central];
   for(a = context_start; a < context_end; a++) if(a != central)
   {
     last_word = m_sen[a];
+    // NOTE: train only word vectors
     trainPairSg(central_word, &(m_doc2vec->m_nn->m_syn0[last_word * m_doc2vec->m_nn->m_dim]));
   }
 }
@@ -247,12 +255,16 @@ void TrainModelThread::trainDocument()
     b = m_next_random % m_doc2vec->m_window;
     context_start = MAX(0, sentence_position - m_doc2vec->m_window + b);
     context_end = MIN(sentence_position + m_doc2vec->m_window - b + 1, m_sentence_length);
-    if(m_doc2vec->m_cbow)
-    {
+    // NOTE: train word vectors first
+    if(m_doc2vec->m_cbow) {
+      // PV-DM
+      // NOTE: train both word and document vectors
       trainSampleCbow(sentence_position, context_start, context_end);
     }
     else
     {
+      // # PV-DBOW
+      // NOTE: train only word vectors
       if(!m_infer) trainSampleSg(sentence_position, context_start, context_end);
     }
   }
@@ -261,6 +273,7 @@ void TrainModelThread::trainDocument()
     for(a = 0; a < m_sentence_nosample_length; a++)
     {
       last_word = m_sen_nosample[a];
+      // NOTE: train only document vectors
       trainPairSg(last_word, m_doc_vector);
     }
   }
