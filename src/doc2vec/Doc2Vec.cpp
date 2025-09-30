@@ -121,7 +121,7 @@ void Doc2Vec::train(const char * train_file,
   for(size_t i =  0; i < m_trainModelThreads.size(); i++) delete m_trainModelThreads[i];
   m_brown_corpus->close();
 
-  m_nn->norm();
+  m_nn->norm(); // NOTE: compute L2 norm 
   //m_wmd = new WMD(this);
   //m_wmd->train();
 }

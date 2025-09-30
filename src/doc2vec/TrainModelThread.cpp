@@ -138,7 +138,7 @@ void TrainModelThread::trainSampleCbow(long long central, long long context_star
 
   for (c = 0; c < layer1_size; c++) m_neu1[c] = 0; // NOTE: reset hidden layer
   for (c = 0; c < layer1_size; c++) m_neu1e[c] = 0; // NOTE: reset hidden layer error
-  //averge context
+  //average context
   // NOTE: average word vectors
   for (a = context_start; a < context_end; a++) if(a != central) {
     last_word = m_sen[a];
@@ -189,6 +189,7 @@ void TrainModelThread::trainSampleCbow(long long central, long long context_star
       } else {
         g = (label - m_doc2vec->m_expTable[(int)((f + MAX_EXP) * (EXP_TABLE_SIZE / MAX_EXP / 2))]) * m_doc2vec->m_alpha;
       }
+      //std::cout << "g:" << g << "\n";
       for (c = 0; c < layer1_size; c++) m_neu1e[c] += g * syn1neg[c + l2];
       if(!m_infer) {
         for (c = 0; c < layer1_size; c++) syn1neg[c + l2] += g * m_neu1[c];  
@@ -285,6 +286,7 @@ void TrainModelThread::trainDocument() {
     }
   }
   if(!m_doc2vec->m_cbow) {
+    // # PV-DBOW
     for(a = 0; a < m_sentence_nosample_length; a++) {
       last_word = m_sen_nosample[a];
       // NOTE: train only document vectors

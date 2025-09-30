@@ -189,8 +189,9 @@ Rcpp::NumericMatrix paragraph2vec_embedding(SEXP ptr, std::string type = "docs",
   long long vocab_size;
   Vocabulary* voc;
   real * m_dsyn0;
-  if(type == "docs"){
-    if(normalize){
+  //std::cout << "Normalize: " << normalize << "\n";
+  if (type == "docs") {
+    if (normalize) {
       m_dsyn0 = net->m_dsyn0norm;
     }else{
       m_dsyn0 = net->m_dsyn0;
@@ -198,27 +199,27 @@ Rcpp::NumericMatrix paragraph2vec_embedding(SEXP ptr, std::string type = "docs",
     vocab_size = m_corpus_size;
     vocab_size = vocab_size - 1;
     voc = model->dvocab();
-  }else if(type == "words"){
-    if(normalize){
+  } else if (type == "words") {
+    if (normalize){
       m_dsyn0 = net->m_syn0norm;
     }else{
       m_dsyn0 = net->m_syn0;
     }
     vocab_size = m_vocab_size;
     voc = model->wvocab();
-  }else{
+  } else {
     Rcpp::stop("type should be either docs or words");
   }
   Rcpp::NumericMatrix embedding(vocab_size, m_dim);
   // Rownames of the embedding matrix
   Rcpp::CharacterVector rownames_(vocab_size);
-  for (int i = 0; i < vocab_size; i++){
+  for (int i = 0; i < vocab_size; i++) {
     std::string input(voc->m_vocab[i].word);
     rownames_(i) = input;
   }
   rownames(embedding) = rownames_;
   std::fill(embedding.begin(), embedding.end(), Rcpp::NumericVector::get_na());
-  for (int a = 0; a < vocab_size; a++){
+  for (int a = 0; a < vocab_size; a++) {
     for (int b = 0; b < m_dim; b++) {
       embedding(a, b) = (float)(m_dsyn0[a * m_dim + b]);
     }
