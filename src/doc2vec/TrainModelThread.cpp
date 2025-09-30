@@ -314,7 +314,7 @@ void TrainModelThread::trainDocument() {
     // # PV-DBOW
     for (a = 0; a < m_sentence_nosample_length; a++) {
       last_word = m_sen_nosample[a];
-      // NOTE: train only document vectors
+      // NOTE: train document vectors using weights
       trainPairSg(last_word, m_doc_vector);
     }
   }
